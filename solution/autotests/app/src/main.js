@@ -82,7 +82,7 @@ export function post_radom() {
     console.log("mytext: " + text)
 
     // post json to the api
-    const res = http.post(`${__ENV.api_host}`, JSON.stringify(text), {
+    const res = http.post(`http://mlops-app:8000/process`, JSON.stringify(text), {
         headers: {
             'Content-Type': 'application/json',
         },

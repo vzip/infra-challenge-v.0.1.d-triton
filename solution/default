@@ -1,13 +1,15 @@
 #default
 upstream app_servers {
-    server 0.0.0.0:8001;
-    server 0.0.0.0:8002;
+    server 0.0.0.0:8005;
+    
 }
 
 server {
-    listen 8000;
+    listen 8010;
 
     location / {
         proxy_pass http://app_servers;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 300s;
     }
 }

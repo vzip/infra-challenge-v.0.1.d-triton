@@ -1,6 +1,5 @@
 # server.py
 import asyncio
-import threading
 import logging
 from typing import Union, List, Dict
 from fastapi import FastAPI
@@ -19,41 +18,24 @@ futures_dict = {}
 worker_queues = [asyncio.Queue() for _ in range(5)]  # Create 5 worker queues
 result_queue = asyncio.Queue()  # Create a single result queue
 
-def start_worker(worker_instance):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(worker_instance.start())
-    loop.close()
-
-def start_responder(responder_instance):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(responder_instance.start())
-    loop.close()
+workers = []
 
 @app.on_event("startup")
 async def startup_event():
-    # Start the workers in separate threads
-    worker_threads = []
-    worker_events = []
+    # Start the workers
     for i, queue in enumerate(worker_queues):
         logging.info(f'Starting worker with queue {id(queue)}.')
         worker_config = config["workers"][i]  # Get the configuration for this worker
-        worker_event = threading.Event()
-        worker_instance = Worker(worker_config, queue, result_queue, worker_event, logger)
-        worker_thread = threading.Thread(target=start_worker, args=(worker_instance,))
-        worker_thread.start()
-        worker_threads.append(worker_thread)
-        worker_events.append(worker_event)
+        event = asyncio.Event()
+        worker_instance = Worker(worker_config, queue, result_queue, event, logger)
+        workers.append(worker_instance)
 
-    # Wait for each worker to fully load before starting the next one
-    for worker_event in worker_events:
-        worker_event.wait()
+    for worker in workers:
+        asyncio.create_task(worker.start())
 
-    # Start the Responder in a separate thread
+    # Start the Responder
     responder_instance = Responder(futures_dict, result_queue, logger)
-    responder_thread = threading.Thread(target=start_responder, args=(responder_instance,))
-    responder_thread.start()
+    asyncio.create_task(responder_instance.start())
 
     logging.info('Server started, running result listener')
 

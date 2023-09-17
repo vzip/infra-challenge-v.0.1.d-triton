@@ -1,15 +1,12 @@
 # Использование PyTorch образа с поддержкой CUDA и cuDNN в качестве базового
-FROM pytorch/pytorch:latest
+# FROM pytorch/pytorch:latest
 # FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubi8
+FROM nvcr.io/nvidia/tritonserver:23.01-pyt-python-py3
 
 # Обновление pip
 RUN pip install --upgrade pip
 
-# Set environment variables
-ARG REDIS_HOST
-ENV REDIS_HOST=$REDIS_HOST
-ARG REDIS_PASSWORD
-ENV REDIS_PASSWORD=$REDIS_PASSWORD
+RUN pip install tritonclient[all]
 
 # Set CUDA environment variables
 ENV NVIDIA_VISIBLE_DEVICES all
@@ -35,6 +32,24 @@ WORKDIR /solution
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
+
+# Создание директории для хранения моделей
+RUN mkdir /models
+
+# Создание структуры директорий для каждой из моделей
+RUN mkdir -p /models/worker1/1
+RUN mkdir -p /models/worker2/1
+RUN mkdir -p /models/worker3/1
+RUN mkdir -p /models/worker4/1
+RUN mkdir -p /models/worker5/1
+
+# Копирование конфигурационных файлов моделей
+COPY model_configs/worker1/config.pbtxt /models/worker1/
+COPY model_configs/worker2/config.pbtxt /models/worker2/
+COPY model_configs/worker3/config.pbtxt /models/worker3/
+COPY model_configs/worker4/config.pbtxt /models/worker4/
+COPY model_configs/worker5/config.pbtxt /models/worker5/
+
 
 COPY /dev_parallel/ .
 
